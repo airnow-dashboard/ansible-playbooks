@@ -1,0 +1,8 @@
+dev_vms:
+  hosts:
+    airnow_dev:
+      ansible_host: 35.184.92.163
+#staging_vms:
+#  hosts:
+#    big_monster:
+#      anisble_host: 38.34.66.100

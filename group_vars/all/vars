@@ -1,0 +1,10 @@
+---
+vm_arch: amd64
+vm_ubuntu_release: focal
+docker_gpg_key_path: /etc/apt/trusted.gpg.d/docker.asc
+db_name: airnow
+db_superuser_name: airnow_admin
+db_readonlyuser_name: airnow
+postgres_image_name: postgres:15.1-bullseye
+postgres_container_name: airnow-postgres
+docker_network_name: airnow

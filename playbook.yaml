@@ -1,0 +1,167 @@
+---
+- hosts: all
+  become: true
+
+  handlers:
+    - name: reload postgresql
+      service:
+        name: postgresql
+        state: reloaded
+
+    - name: restart postgresql
+      service:
+        name: postgresql
+        state: restarted
+
+  tasks:
+    - name: "Install Aptitude"
+      block:
+        - name: "Install aptitude"
+          apt:
+            name: aptitude
+            state: latest
+            update_cache: true
+
+    - name: "Install Docker"
+      block:
+        - name: "Install required system packages"
+          apt:
+            pkg:
+              - apt-transport-https
+              - ca-certificates
+              - curl
+              - acl
+              - software-properties-common
+              - python3-pip
+              - virtualenv
+              - python3-setuptools
+            state: latest
+            update_cache: true
+
+        - name: "Add Docker GPG apt Key"
+          ansible.builtin.get_url:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            dest: "{{ docker_gpg_key_path }}"
+
+        - name: "Add Docker Repository"
+          apt_repository:
+            repo: |
+              deb [arch={{ vm_arch }} signed-by={{ docker_gpg_key_path }}]
+              https://download.docker.com/linux/ubuntu
+              {{ vm_ubuntu_release }} stable
+            state: present
+            filename: docker
+
+        - name: "Update apt and install docker-ce"
+          apt:
+            name:
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+              - docker-compose-plugin
+            state: latest
+            update_cache: true
+
+        - name: "Install Docker Module for Python"
+          pip:
+            name: docker
+
+        - name: "Create AirNow docker network"
+          community.docker.docker_network:
+            name: "{{ docker_network_name }}"
+
+    - name: "Setup PostgreSQL"
+      block:
+        - name: "Install PostgreSQL packages"
+          apt:
+            pkg:
+              - postgresql
+              - postgresql-contrib
+              - libpq-dev
+              - python3-psycopg2
+            state: latest
+            update_cache: true
+
+        - name: "Ping PostgreSQL"
+          postgresql_ping:
+            db: postgres
+            login_unix_socket: "/var/run/postgresql"
+            login_user: postgres
+          become_user: postgres
+
+        - name: "Create superuser role"
+          postgresql_user:
+            db: postgres
+            login_user: postgres
+            login_unix_socket: "/var/run/postgresql"
+            name: "{{ db_superuser_name }}"
+            password: "{{ vault_db_superuser_password }}"
+          become_user: postgres
+
+        - name: "Create read-only user role"
+          postgresql_user:
+            db: postgres
+            login_user: postgres
+            login_unix_socket: "/var/run/postgresql"
+            name: "{{ db_readonlyuser_name }}"
+            password: "{{ vault_db_readonlyuser_password }}"
+          become_user: postgres
+
+        - name: "Create database"
+          postgresql_db:
+            maintenance_db: postgres
+            login_user: postgres
+            login_unix_socket: "/var/run/postgresql"
+            name: "{{ db_name }}"
+            owner: "{{ db_superuser_name }}"
+          become_user: postgres
+
+        - name: "Find PostgreSQL version"
+          ansible.builtin.find:
+            paths: /etc/postgresql
+            recurse: no
+            file_type: directory
+          register: pg_folders
+
+        - name: "Configure pg_hba.conf of the first PostgreSQL in the instance"
+          postgresql_pg_hba:
+            dest: "{{ pg_folders.files[0].path }}/main/pg_hba.conf"
+            contype: host
+            users: "{{ db_superuser_name }},{{ db_readonlyuser_name }}"
+            source: "0.0.0.0/0"
+            databases: "{{ db_name }}"
+            method: "md5"
+          notify:
+            - reload postgresql
+
+        - name: "Let PostgreSQL listen to all remote connections"
+          postgresql_set:
+            login_user: postgres
+            login_unix_socket: "/var/run/postgresql"
+            name: listen_addresses
+            value: '*'
+          become_user: postgres
+          notify:
+            - restart postgresql
+
+        - name: "Create table"
+          postgresql_table:
+            login_user: postgres
+            login_unix_socket: "/var/run/postgresql"
+            db: "{{ db_name }}"
+            name: "demotable"
+            columns:
+              - id serial primary key
+              - data text
+            owner: "{{ db_superuser_name }}"
+          become_user: postgres
+
+        - name: "Create index on demo table"
+          postgresql_idx:
+            login_user: postgres
+            login_unix_socket: "/var/run/postgresql"
+            db: "{{ db_name }}"
+            columns: "data"
+            idxname: "demotable_data_idx"
+            table: "demotable"
+          become_user: postgres
