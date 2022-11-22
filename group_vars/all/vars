@@ -1,18 +1,19 @@
 ---
 vm_arch: amd64
 vm_ubuntu_release: focal
+python_version: 3.8
+
 docker_gpg_key_path: /etc/apt/trusted.gpg.d/docker.asc
+docker_network_name: airnow
+
+postgres_version: 12
 db_name: airnow
 db_superuser_name: airnow_admin
 db_readonlyuser_name: airnow
-postgres_image_name: postgres:15.1-bullseye
-postgres_container_name: airnow-postgres
-docker_network_name: airnow
-python_version: 3.8
+
 airflow_version: 2.4.3
 airflow_extras: postgres
 airflow_username: admin
 airflow_email: admin@solsyn.dev
-airflow_systemd_service_repo_url: https://github.com/SoloSynth1/airflow-systemd-service.git
 airflow_user: airflow
 airflow_group: airflow

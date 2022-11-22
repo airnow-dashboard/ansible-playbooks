@@ -80,8 +80,8 @@
         - name: "Install PostgreSQL packages"
           apt:
             pkg:
-              - postgresql
-              - postgresql-contrib
+              - "postgresql-{{ postgres_version }}"
+              - "postgresql-contrib-{{ postgres_version }}"
               - libpq-dev
               - python3-psycopg2
             state: latest
@@ -121,16 +121,9 @@
             owner: "{{ db_superuser_name }}"
           become_user: postgres
 
-        - name: "Find PostgreSQL version"
-          ansible.builtin.find:
-            paths: /etc/postgresql
-            recurse: false
-            file_type: directory
-          register: pg_folders
-
         - name: "Configure pg_hba.conf of the first PostgreSQL in the instance"
           postgresql_pg_hba:
-            dest: "{{ pg_folders.files[0].path }}/main/pg_hba.conf"
+            dest: "/etc/postgresql/{{ postgres_version }}/main/pg_hba.conf"
             contype: host
             users: "{{ db_superuser_name }},{{ db_readonlyuser_name }}"
             source: "0.0.0.0/0"
