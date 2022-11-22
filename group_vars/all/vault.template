@@ -1,3 +1,4 @@
 vault_db_superuser_password:
 vault_db_readonlyuser_password:
 vault_postgres_password:
+vault_airflow_password:
