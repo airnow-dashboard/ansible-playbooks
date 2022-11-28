@@ -147,22 +147,28 @@
             login_user: postgres
             login_unix_socket: "/var/run/postgresql"
             db: "{{ db_name }}"
-            name: "demotable"
+            name: "pm25_measurements"
             columns:
-              - id serial primary key
-              - data text
+              - datetime timestamp not null
+              - location varchar(100) not null
+              - aqi numeric null
+              - aqi_cat varchar(30) null
+              - conc numeric null
+              - PRIMARY KEY(datetime, location)
+              # TODO: add parittioning
             owner: "{{ db_superuser_name }}"
           become_user: postgres
 
-        - name: "Create index on demo table"
-          postgresql_idx:
-            login_user: postgres
-            login_unix_socket: "/var/run/postgresql"
-            db: "{{ db_name }}"
-            columns: "data"
-            idxname: "demotable_data_idx"
-            table: "demotable"
-          become_user: postgres
+#        # TODO: add second table to store coordinates for cities
+#        - name: "Create index on demo table"
+#          postgresql_idx:
+#            login_user: postgres
+#            login_unix_socket: "/var/run/postgresql"
+#            db: "{{ db_name }}"
+#            columns: "data"
+#            idxname: "demotable_data_idx"
+#            table: "demotable"
+#          become_user: postgres
 
     - name: "Setup Airflow"
       block:
@@ -172,7 +178,7 @@
             name: "{{ airflow_group }}"
             state: present
 
-        - name: "Create new user'"
+        - name: "Create new user"
           user:
             name: "{{ airflow_user }}"
             create_home: yes
