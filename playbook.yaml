@@ -142,7 +142,7 @@
           notify:
             - restart postgresql
 
-        - name: "Create table"
+        - name: "Create pm25_measurements table"
           postgresql_table:
             login_user: postgres
             login_unix_socket: "/var/run/postgresql"
@@ -155,20 +155,23 @@
               - aqi_cat varchar(30) null
               - conc numeric null
               - PRIMARY KEY(datetime, location)
-              # TODO: add parittioning
             owner: "{{ db_superuser_name }}"
           become_user: postgres
 
-#        # TODO: add second table to store coordinates for cities
-#        - name: "Create index on demo table"
-#          postgresql_idx:
-#            login_user: postgres
-#            login_unix_socket: "/var/run/postgresql"
-#            db: "{{ db_name }}"
-#            columns: "data"
-#            idxname: "demotable_data_idx"
-#            table: "demotable"
-#          become_user: postgres
+        - name: "Create cities table"
+          postgresql_table:
+            login_user: postgres
+            login_unix_socket: "/var/run/postgresql"
+            db: "{{ db_name }}"
+            name: "cities"
+            columns:
+              - location varchar(100) not null
+              - latitude numeric null
+              - longitude numeric null
+              - latlon varchar(50) null
+              - PRIMARY KEY(location)
+            owner: "{{ db_superuser_name }}"
+          become_user: postgres
 
     - name: "Setup Airflow"
       block:
