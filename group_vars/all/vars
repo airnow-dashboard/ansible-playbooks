@@ -17,3 +17,5 @@ airflow_username: admin
 airflow_email: admin@solsyn.dev
 airflow_user: airflow
 airflow_group: airflow
+
+git_repo_location: /tmp/repos/

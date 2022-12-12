@@ -173,6 +173,38 @@
             owner: "{{ db_superuser_name }}"
           become_user: postgres
 
+    - name: "Clone git repos & build docker images"
+      block:
+        - name: "Clone airnow-scraper"
+          ansible.builtin.git:
+            repo: "https://github.com/airnow-dashboard/airnow-scraper.git"
+            dest: "{{ git_repo_location }}/airnow-scraper"
+            single_branch: yes
+            version: master
+
+        - name: "Build airnow-scraper"
+          docker_image:
+            build:
+              path: "{{ git_repo_location }}/airnow-scraper"
+            name: airnow-scraper
+            tag: latest
+            source: build
+
+        - name: "Clone piper"
+          ansible.builtin.git:
+            repo: "https://{{ vault_github_username }}:{{ vault_github_access_token }}@github.com/airnow-dashboard/piper.git"
+            dest: "{{ git_repo_location }}/piper"
+            single_branch: yes
+            version: master
+
+        - name: "Build piper"
+          docker_image:
+            build:
+              path: "{{ git_repo_location }}/piper"
+            name: piper
+            tag: latest
+            source: build
+
     - name: "Setup Airflow"
       block:
 
