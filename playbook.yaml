@@ -173,6 +173,76 @@
             owner: "{{ db_superuser_name }}"
           become_user: postgres
 
+    - name: "Setup Airflow"
+      block:
+
+        - name: "Create airflow group"
+          group:
+            name: "{{ airflow_group }}"
+            state: present
+
+        - name: "Create new user"
+          user:
+            name: "{{ airflow_user }}"
+            create_home: yes
+            groups: "{{ airflow_group }},docker"
+            state: present
+
+        - name: "Install Airflow & constaints via pip"
+          become_user: "{{ airflow_user }}"
+          pip:
+            name: "apache-airflow[{{ airflow_extras }}]=={{ airflow_version }}"
+            extra_args: "--constraint https://raw.githubusercontent.com/apache/airflow/constraints-{{ airflow_version }}/constraints-{{ python_version }}.txt"
+
+        - name: "Add airflow to PATH"
+          lineinfile:
+            path: /etc/environment
+            regexp: 'PATH=(["])((?!.*?/home/{{ airflow_user }}/.local/bin).*?)(["])$'
+            line: 'PATH=\1\2:/home/{{ airflow_user }}/.local/bin\3'
+            backrefs: yes
+
+        - name: "Initialize Airflow DB"
+          shell: "/home/{{ airflow_user }}/.local/bin/airflow db init"
+          become_user: "{{ airflow_user }}"
+
+        - name: "Create new Airflow admin"
+          shell: |
+            /home/{{ airflow_user }}/.local/bin/airflow users create \
+            --username {{ airflow_username }} \
+            --firstname John \
+            --lastname Doe \
+            --role Admin \
+            --email {{ airflow_email }} \
+            --password {{ vault_airflow_password }}
+          register: result
+          become_user: "{{ airflow_user }}"
+
+        - name: "Template a file to /root"
+          ansible.builtin.template:
+            src: ./templates/airflow-scheduler.service.j2
+            dest: /lib/systemd/system/airflow-scheduler.service
+
+        - name: "Template a file to /root"
+          ansible.builtin.template:
+            src: ./templates/airflow-webserver.service.j2
+            dest: /lib/systemd/system/airflow-webserver.service
+
+        - name: "Enable airflow services - scheduler"
+          service:
+            name: airflow-scheduler.service
+            enabled: yes
+            state: started
+
+        - name: "Enable airflow services - webserver"
+          service:
+            name: airflow-webserver.service
+            enabled: yes
+            state: started
+
+        - name: "Reload all daemons in systemd"
+          systemd:
+            daemon_reload: yes
+
     - name: "Clone git repos & build docker images"
       block:
         - name: "Clone airnow-scraper"
@@ -205,61 +275,16 @@
             tag: latest
             source: build
 
-    - name: "Setup Airflow"
-      block:
+        - name: "Delete content in Airflow's DAG directory"
+          file:
+            state: absent
+            path: "/home/{{ airflow_user }}/airflow/dags/"
 
-        - name: "Create airflow group"
-          group:
-            name: "{{ airflow_group }}"
-            state: present
-
-        - name: "Create new user"
-          user:
-            name: "{{ airflow_user }}"
-            create_home: yes
-            groups: "{{ airflow_group }},docker"
-            state: present
-
-        - name: "Install Airflow & constaints via pip"
+        - name: "Clone airflow-dags to Airflow's DAG directory"
           become_user: "{{ airflow_user }}"
-          pip:
-            name: "apache-airflow[{{ airflow_extras }}]=={{ airflow_version }}"
-            extra_args: "--constraint https://raw.githubusercontent.com/apache/airflow/constraints-{{ airflow_version }}/constraints-{{ python_version }}.txt"
-
-        - name: "Initialize Airflow DB"
-          shell: "/home/{{ airflow_user }}/.local/bin/airflow db init"
-          become_user: "{{ airflow_user }}"
-
-        - name: "Create new Airflow admin"
-          shell: |
-            /home/{{ airflow_user }}/.local/bin/airflow users create \
-            --username {{ airflow_username }} \
-            --firstname John \
-            --lastname Doe \
-            --role Admin \
-            --email {{ airflow_email }} \
-            --password {{ vault_airflow_password }}
-          register: result
-          become_user: "{{ airflow_user }}"
-
-        - name: Template a file to /root
-          ansible.builtin.template:
-            src: ./templates/airflow-scheduler.service.j2
-            dest: /lib/systemd/system/airflow-scheduler.service
-
-        - name: Template a file to /root
-          ansible.builtin.template:
-            src: ./templates/airflow-webserver.service.j2
-            dest: /lib/systemd/system/airflow-webserver.service
-
-        - name: Enable airflow services
-          service:
-            name: airflow-scheduler.service
-            enabled: yes
-            state: started
-
-        - name: Enable airflow services
-          service:
-            name: airflow-webserver.service
-            enabled: yes
-            state: started
+          ansible.builtin.git:
+            repo: "https://{{ vault_github_username }}:{{ vault_github_access_token }}@github.com/airnow-dashboard/airflow-dags.git"
+            dest: "/home/{{ airflow_user }}/airflow/dags"
+            single_branch: yes
+            version: master
+            force: true

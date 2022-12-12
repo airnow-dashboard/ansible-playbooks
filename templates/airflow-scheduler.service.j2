@@ -2,11 +2,11 @@
 Description=Airflow scheduler daemon
 After=syslog.target network.target
 [Service]
-PIDFile=/run/airflow/scheduler.pid
+PIDFile=/home/{{ airflow_user }}/scheduler.pid
 User={{ airflow_user }}
 Group={{ airflow_group }}
 Type=forking
-ExecStart=/bin/bash -c 'export AIRFLOW_HOME=/home/{{ airflow_user }}/airflow ; /home/{{ airflow_user }}/.local/bin/airflow scheduler -D --pid /run/airflow/scheduler.pid'
+ExecStart=/bin/bash -c 'export AIRFLOW_HOME=/home/{{ airflow_user }}/airflow ; /home/{{ airflow_user }}/.local/bin/airflow scheduler -D'
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s TERM $MAINPID
 RuntimeDirectory={{ airflow_user }}
