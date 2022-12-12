@@ -1,18 +1,20 @@
 [Unit]
 Description=Airflow webserver daemon
 After=syslog.target network.target
+
 [Service]
-PIDFile=/home/{{ airflow_user }}/webserver.pid
-User={{ airflow_user }}
-Group={{ airflow_group }}
-Type=forking
-ExecStart=/bin/bash -c 'export AIRFLOW_HOME=/home/{{ airflow_user }}/airflow ; /home/{{ airflow_user }}/.local/bin/airflow webserver -D'
-ExecReload=/bin/kill -s HUP $MAINPID
-ExecStop=/bin/kill -s TERM $MAINPID
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/{{ airflow_user }}/.local/bin"
 RuntimeDirectory={{ airflow_user }}
 WorkingDirectory=/home/{{ airflow_user }}
-Restart=on-failure
-RestartSec=42s
+PIDFile=/run/airflow/webserver.pid
+User={{ airflow_user }}
+Group={{ airflow_group }}
+Type=simple
+ExecStart=/bin/bash -c 'export AIRFLOW_HOME=/home/{{ airflow_user }}/airflow ; /home/{{ airflow_user }}/.local/bin/airflow webserver'
+KillSignal=SIGINT
+Restart=always
+RestartSec=10s
 PrivateTmp=true
+
 [Install]
 WantedBy=multi-user.target
