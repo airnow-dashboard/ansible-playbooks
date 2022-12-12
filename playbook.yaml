@@ -243,14 +243,23 @@
           systemd:
             daemon_reload: yes
 
-    - name: "Clone git repos & build docker images"
+    - name: "Deploy airnow-dashboard services: clone git repos, build docker images prepare environments"
       block:
+        - name: "Create output folder"
+          ansible.builtin.file:
+            owner: "{{ airflow_user }}"
+            group: "{{ airflow_group}}"
+            path: "{{ airnow_output_path }}"
+            state: directory
+            mode: '0755'
+
         - name: "Clone airnow-scraper"
           ansible.builtin.git:
             repo: "https://github.com/airnow-dashboard/airnow-scraper.git"
             dest: "{{ git_repo_location }}/airnow-scraper"
             single_branch: yes
             version: master
+            force: true
 
         - name: "Build airnow-scraper"
           docker_image:
@@ -259,6 +268,7 @@
             name: airnow-scraper
             tag: latest
             source: build
+            force_source: true  # rebuild everytime
 
         - name: "Clone piper"
           ansible.builtin.git:
@@ -266,6 +276,7 @@
             dest: "{{ git_repo_location }}/piper"
             single_branch: yes
             version: master
+            force: true
 
         - name: "Build piper"
           docker_image:
@@ -274,6 +285,7 @@
             name: piper
             tag: latest
             source: build
+            force_source: true  # rebuild everytime
 
         - name: "Delete content in Airflow's DAG directory"
           file:

@@ -19,3 +19,5 @@ airflow_user: airflow
 airflow_group: airflow
 
 git_repo_location: /tmp/repos/
+
+airnow_output_path: /var/lib/airnow
