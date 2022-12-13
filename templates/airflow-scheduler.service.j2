@@ -4,6 +4,9 @@ After=syslog.target network.target
 
 [Service]
 Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/{{ airflow_user }}/.local/bin"
+Environment="AIRNOW_DB_HOST=127.0.0.1"
+Environment="AIRNOW_DB_USER={{ db_superuser_name }}"
+Environment="AIRNOW_DB_PASSWORD={{ vault_db_superuser_password }}"
 RuntimeDirectory={{ airflow_user }}
 WorkingDirectory=/home/{{ airflow_user }}
 PIDFile=/run/airflow/scheduler.pid
