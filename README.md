@@ -37,7 +37,7 @@ ansible-vault edit ./group_vars/all/vault
 
 #### View existing vault
 ```shell
-ansible-vault vault ./group_vars/all/vault
+ansible-vault view ./group_vars/all/vault
 ```
 
 ### Debug and check variables
